@@ -270,16 +270,6 @@ FT_BEGIN_HEADER
 
   /*************************************************************************/
   /*                                                                       */
-  /* Computation Algorithms                                                */
-  /*                                                                       */
-  /*   Used for debugging, this configuration macro should disappear       */
-  /*   soon.                                                               */
-  /*                                                                       */
-#undef FT_CONFIG_OPTION_OLD_CALCS
-
-
-  /*************************************************************************/
-  /*                                                                       */
   /* The size in bytes of the render pool used by the scan-line converter  */
   /* to do all of its work.                                                */
   /*                                                                       */
@@ -375,7 +365,7 @@ FT_BEGIN_HEADER
   /* By undefining this, you will only compile the code necessary to load  */
   /* TrueType glyphs without hinting.                                      */
   /*                                                                       */
-#undef TT_CONFIG_OPTION_BYTECODE_INTERPRETER
+#define TT_CONFIG_OPTION_BYTECODE_INTERPRETER
 
 
   /*************************************************************************/

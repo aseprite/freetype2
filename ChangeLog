@@ -1,3 +1,21 @@
+2002-03-25  David Turner    <david@freetype.org>
+
+        * src/base/fttrigon.c, src/truetype/ttinterp.c: fixing the TrueType
+          bytecode interpreter to compute the same values than FreeType 1.
+          
+          The difference came from distinct algorithm for computing the
+          dot product and vector lengths. It seems that TT bytecode
+          interpretation is _extremely_ sensitive to rounding 'errors'
+          of fixed-point arithmetic..
+
+        * include/freetype/config/ftoption.h,
+          include/freetype/internal/ftcalc.h,
+          src/base/ftcalc.c:
+          
+            gettting rid of the now obsolete FT_CONFIG_OPTION_OLD_CALCS
+            macro
+            
+
 2002-03-15  Werner Lemberg  <wl@gnu.org>
 
 	* builds/win32/visualc/{freetype.dsp,index.html}: Update to 2.0.9.
