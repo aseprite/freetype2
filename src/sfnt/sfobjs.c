@@ -231,23 +231,14 @@
       rec = face->name_table.names + found_win;
       switch ( rec->encodingID )
       {
-        case TT_MS_ID_UNICODE_CS:
-          {
-            result = tt_name_entry_ascii_from_utf16( rec, memory );
-            break;
-          }
+      case TT_MS_ID_UNICODE_CS:
+      case TT_MS_ID_SYMBOL_CS:
+        result = tt_name_entry_ascii_from_utf16( rec, memory );
+        break;
           
-        case TT_MS_ID_SYMBOL_CS:
-          {
-            result = tt_name_entry_ascii_from_other( rec, memory );
-            break;
-          }
-          
-        case TT_MS_ID_UCS_4:
-          {
-            result = tt_name_entry_ascii_from_ucs4( rec, memory );
-            break;
-          }
+      case TT_MS_ID_UCS_4:
+        result = tt_name_entry_ascii_from_ucs4( rec, memory );
+        break;
       }
     }
     else if ( found_apple >= 0 )
