@@ -1,3 +1,8 @@
+2002-03-26  David Turner    <david@freetype.org>
+
+        * src/sfnt/sfobjs.c (Get_Name): improved the routine in charge of
+          retrieving the english name of a font
+
 2002-03-25  David Turner    <david@freetype.org>
 
         * src/base/fttrigon.c, src/truetype/ttinterp.c: fixing the TrueType

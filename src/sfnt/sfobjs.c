@@ -37,6 +37,233 @@
 #define FT_COMPONENT  trace_sfobjs
 
 
+#if 1
+
+ /* convert a UTF-16 name entry to ASCII */
+  static FT_String*
+  tt_name_entry_ascii_from_utf16( TT_NameRec*   entry,
+                                  FT_Memory     memory )
+  {
+    FT_String*  string;
+    FT_UInt     len, code, n;
+    FT_Byte*    read = (FT_Byte*) entry->string;
+    FT_Error    error;
+    
+    len = (FT_UInt) entry->stringLength/2;
+    
+    if ( ALLOC( string, len+1 ) )
+      return NULL;
+    
+    for ( n = 0; n < len; n++ )
+    {
+      code = NEXT_UShort(read);
+      if ( code < 32 || code > 127 )
+        code = '?';
+        
+      string[n] = (char)code;
+    }
+
+    string[len] = 0;
+    
+    return string;
+  }                                   
+
+
+ /* convert a UCS-4 name entry to ASCII */
+  static FT_String*
+  tt_name_entry_ascii_from_ucs4( TT_NameRec*  entry,
+                                 FT_Memory    memory )
+  {
+    FT_String*  string;
+    FT_UInt     len, code, n;
+    FT_Byte*    read = (FT_Byte*) entry->string;
+    FT_Error    error;
+    
+    len = (FT_UInt) entry->stringLength/4;
+    
+    if ( ALLOC( string, len+1 ) )
+      return NULL;
+    
+    for ( n = 0; n < len; n++ )
+    {
+      code = NEXT_ULong(read);
+      if ( code < 32 || code > 127 )
+        code = '?';
+        
+      string[n] = (char)code;
+    }
+
+    string[len] = 0;
+    
+    return string;
+  }                                 
+
+
+ /* convert an Apple Roman or symbol name entry to ASCII */
+  static FT_String*
+  tt_name_entry_ascii_from_other( TT_NameRec*  entry,
+                                  FT_Memory    memory )
+  {
+    FT_String*  string;
+    FT_UInt     len, code, n;
+    FT_Byte*    read = (FT_Byte*) entry->string;
+    FT_Error    error;
+    
+    len = (FT_UInt) entry->stringLength;
+    
+    if ( ALLOC( string, len+1 ) )
+      return NULL;
+    
+    for ( n = 0; n < len; n++ )
+    {
+      code = *read++;
+      if ( code < 32 || code > 127 )
+        code = '?';
+        
+      string[n] = (char)code;
+    }
+
+    string[len] = 0;
+    
+    return string;
+  }                                  
+
+
+  /*************************************************************************/
+  /*                                                                       */
+  /* <Function>                                                            */
+  /*    tt_face_get_name                                                   */
+  /*                                                                       */
+  /* <Description>                                                         */
+  /*    Returns a given ENGLISH name record in ASCII.                      */
+  /*                                                                       */
+  /* <Input>                                                               */
+  /*    face   :: A handle to the source face object.                      */
+  /*                                                                       */
+  /*    nameid :: The name id of the name record to return.                */
+  /*                                                                       */
+  /* <Return>                                                              */
+  /*    Character string.  NULL if no name is present.                     */
+  /*                                                                       */
+  static FT_String*
+  Get_Name( TT_Face    face,
+            FT_UShort  nameid )
+  {
+    FT_Memory    memory = face->root.memory;
+    FT_String*   result = NULL;
+    FT_UShort    n;
+    TT_NameRec*  rec;
+    FT_Int       found_apple   = -1;
+    FT_Int       found_win     = -1;
+    FT_Int       found_unicode = -1;
+
+
+    rec = face->name_table.names;
+    for ( n = 0; n < face->name_table.numNameRecords; n++, rec++ )
+    {
+      /* according to the OpenType 1.3 specification, only Microsoft of */
+      /* Apple platform ids might be used in the 'name' table. The      */
+      /* 'Unicode' platform is reserved for the 'cmap' table, and       */
+      /* the 'Iso' one is deprecated                                    */
+
+      /* however the Apple TrueType specification doesn't says the same  */
+      /* thing and goes to suggest that all Unicode 'name' table entries */
+      /* should be coded in UTF-16 (in big-endian format I suppose)      */
+      /*                                                                 */
+      if ( rec->nameID == nameid && rec->string )
+      {
+        switch ( rec->platformID )
+        {
+
+          case TT_PLATFORM_APPLE_UNICODE:
+          case TT_PLATFORM_ISO:
+            {
+              /* there is 'languageID' to check there. We should use this */
+              /* field only as a last solution when nothing else is       */
+              /* available..                                              */
+              /*                                                          */
+              found_unicode = n;
+              break;
+            }
+          
+          case TT_PLATFORM_MACINTOSH:
+            {
+              if ( rec->languageID == TT_MAC_LANGID_ENGLISH )
+                found_apple = n;
+              
+              break;
+            }
+            
+          case TT_PLATFORM_MICROSOFT:
+            {
+              if ( (rec->languageID & 0x3FF) == 0x009 )
+              {
+                switch ( rec->encodingID )
+                {
+                  case TT_MS_ID_SYMBOL_CS:
+                  case TT_MS_ID_UNICODE_CS:
+                  case TT_MS_ID_UCS_4:
+                    found_win = n;
+                    break;
+                    
+                  default:
+                    ;
+                }
+              }
+              break;
+            }
+          
+          default:
+            ;
+        }
+      }
+    }
+
+    /* some fonts contain invalid Unicode or Macintosh formatted entries */
+    /* we will thus favor name encoded in Windows formats when they're   */
+    /* available..                                                       */
+    /*                                                                   */
+    if ( found_win >= 0 )
+    {
+      rec = face->name_table.names + found_win;
+      switch ( rec->encodingID )
+      {
+        case TT_MS_ID_UNICODE_CS:
+          {
+            result = tt_name_entry_ascii_from_utf16( rec, memory );
+            break;
+          }
+          
+        case TT_MS_ID_SYMBOL_CS:
+          {
+            result = tt_name_entry_ascii_from_other( rec, memory );
+            break;
+          }
+          
+        case TT_MS_ID_UCS_4:
+          {
+            result = tt_name_entry_ascii_from_ucs4( rec, memory );
+            break;
+          }
+      }
+    }
+    else if ( found_apple >= 0 )
+    {
+      rec    = face->name_table.names + found_apple;
+      result = tt_name_entry_ascii_from_other( rec, memory );
+    }
+    else if ( found_unicode >= 0 )
+    {
+      rec    = face->name_table.names + found_unicode;
+      result = tt_name_entry_ascii_from_utf16( rec, memory );
+    }
+    
+    return result;
+  }
+
+
+#else /* 0 */
+
   /*************************************************************************/
   /*                                                                       */
   /* <Function>                                                            */
@@ -152,6 +379,8 @@
 
     return NULL;
   }
+
+#endif /* 0 */
 
 
   static FT_Encoding
