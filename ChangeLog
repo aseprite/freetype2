@@ -1,3 +1,8 @@
+2002-04-16  Francesco Zappa Nardelli  <Francesco.Zappa.Nardelli@ens.fr>
+
+	* src/pcf/pcfread (pcf_get_accell): Fix parsing of accelerator
+	tables.
+
 2002-03-29  KUSANO Takayuki  <AE5T-KSN@asahi-net.or.jp>
 
 	* src/sfnt/sfobjs.c (Get_Name): Handle (3,0) name entries similar to
@@ -16,7 +21,7 @@
 2002-03-25  David Turner  <david@freetype.org>
 
 	* src/base/fttrigon.c, src/truetype/ttinterp.c: Fixing the TrueType
-	bytecode interpreter to compute the same values than FreeType 1.
+	bytecode interpreter to compute the same values as FreeType 1.
 
 	The difference came from distinct algorithm for computing the dot
 	product and vector lengths.  It seems that TT bytecode
@@ -39,8 +44,10 @@
 
 2002-03-08  David Turner  <david@freetype.org>
 
+
 	* Version 2.0.9 Released.
 	=========================
+
 
 	* README: updating the FTP addresses of the documentation
 
@@ -165,8 +172,10 @@
 
 2002-02-08  David Turner  <david@freetype.org>
 
+
 	* Version 2.0.8 released.
 	=========================
+
 
 	* docs/CHANGES: Updating for 2.0.8.
 
