@@ -145,7 +145,7 @@
       }
     }
     
-    if ( found_win )
+    if ( found_win != -1 )
     {
       FT_Memory    memory = face->root.memory;
       TT_NameRec*  name   = face->name_table.names + found_win;
@@ -168,10 +168,10 @@
       return result;
     }
 
-    if ( found_apple )
+    if ( found_apple != -1 )
     {
       FT_Memory    memory = face->root.memory;
-      TT_NameRec*  name   = face->name_table.names + found_win;
+      TT_NameRec*  name   = face->name_table.names + found_apple;
       FT_UInt      len    = name->stringLength;
       FT_Error     error;
       FT_String*   result;

@@ -1,25 +1,25 @@
-2002-03-26  David Turner    <david@freetype.org>
+2002-03-28  KUSANO Takayuki  <AE5T-KSN@asahi-net.or.jp>
 
-        * src/sfnt/sfobjs.c (Get_Name): improved the routine in charge of
-          retrieving the english name of a font
+	* src/sfnt/sfdriver.c (get_sfnt_postscript_name): Fix serious typos.
 
-2002-03-25  David Turner    <david@freetype.org>
+2002-03-26  David Turner  <david@freetype.org>
 
-        * src/base/fttrigon.c, src/truetype/ttinterp.c: fixing the TrueType
-          bytecode interpreter to compute the same values than FreeType 1.
-          
-          The difference came from distinct algorithm for computing the
-          dot product and vector lengths. It seems that TT bytecode
-          interpretation is _extremely_ sensitive to rounding 'errors'
-          of fixed-point arithmetic..
+	* src/sfnt/sfobjs.c (Get_Name): Improved the routine in charge of
+	retrieving the english name of a font.
 
-        * include/freetype/config/ftoption.h,
-          include/freetype/internal/ftcalc.h,
-          src/base/ftcalc.c:
-          
-            gettting rid of the now obsolete FT_CONFIG_OPTION_OLD_CALCS
-            macro
-            
+2002-03-25  David Turner  <david@freetype.org>
+
+	* src/base/fttrigon.c, src/truetype/ttinterp.c: Fixing the TrueType
+	bytecode interpreter to compute the same values than FreeType 1.
+
+	The difference came from distinct algorithm for computing the dot
+	product and vector lengths.  It seems that TT bytecode
+	interpretation is _extremely_ sensitive to rounding `errors' of
+	fixed-point arithmetic.
+
+	* include/freetype/config/ftoption.h,
+	include/freetype/internal/ftcalc.h, src/base/ftcalc.c: Getting rid
+	of the now obsolete FT_CONFIG_OPTION_OLD_CALCS macro.
 
 2002-03-15  Werner Lemberg  <wl@gnu.org>
 
