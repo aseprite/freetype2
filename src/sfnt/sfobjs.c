@@ -196,7 +196,10 @@
             
           case TT_PLATFORM_MICROSOFT:
             {
-              if ( (rec->languageID & 0x3FF) == 0x009 )
+              /* we only take a non-English name when there is nothing */
+              /* else available in the font..                          */
+              /*                                                       */
+              if ( found_win = -1 || (rec->languageID & 0x3FF) == 0x009 )
               {
                 switch ( rec->encodingID )
                 {
