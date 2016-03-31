@@ -383,28 +383,33 @@ endif ()
 
 # Installations
 # Note the trailing slash in the argument to the `DIRECTORY' directive
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
-  DESTINATION include/freetype2
-  PATTERN "internal" EXCLUDE
-  PATTERN "ftconfig.h" EXCLUDE
-  PATTERN "ftoption.h" EXCLUDE
-)
-install(FILES
-  ${PROJECT_BINARY_DIR}/include/freetype/config/ftconfig.h
-  ${PROJECT_BINARY_DIR}/include/freetype/config/ftoption.h
-  DESTINATION include/freetype2/freetype/config
-)
-install(TARGETS freetype
-  EXPORT freetype-targets
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION lib
-  ARCHIVE DESTINATION lib
-  FRAMEWORK DESTINATION Library/Frameworks
-)
-install(EXPORT freetype-targets
-  DESTINATION lib/cmake/freetype
-  FILE freetype-config.cmake
-)
+if(NOT SKIP_INSTALL_HEADERS AND NOT SKIP_INSTALL_ALL)
+  install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+    DESTINATION include/freetype2
+    PATTERN "internal" EXCLUDE
+    PATTERN "ftconfig.h" EXCLUDE
+    PATTERN "ftoption.h" EXCLUDE
+    )
+  install(FILES
+    ${PROJECT_BINARY_DIR}/include/freetype/config/ftconfig.h
+    ${PROJECT_BINARY_DIR}/include/freetype/config/ftoption.h
+    DESTINATION include/freetype2/freetype/config
+    )
+endif()
+
+if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL)
+  install(TARGETS freetype
+    EXPORT freetype-targets
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    FRAMEWORK DESTINATION Library/Frameworks
+    )
+  install(EXPORT freetype-targets
+    DESTINATION lib/cmake/freetype
+    FILE freetype-config.cmake
+    )
+endif()
 
 
 # Packaging
