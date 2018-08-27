@@ -234,4 +234,20 @@
 #endif /* FT_DEBUG_LEVEL_ERROR */
 
 
+/* documentation is in ftdebug.h */
+
+FT_BASE_DEF( void )
+FT_Trace_Disable( void )
+{
+  /* nothing */
+}
+
+
+FT_BASE_DEF( void )
+FT_Trace_Enable( void )
+{
+  /* nothing */
+}
+
+
 /* END */
