@@ -1,9 +1,69 @@
+
+CHANGES BETWEEN 2.9.1 and 2.10
+
+  I. IMPORTANT BUG FIXES
+
+
+  II. IMPORTANT CHANGES
+
+    - A bunch of new functions has been added to access and process
+      COLR/CPAL data of OpenType fonts with coloured glyph layers.
+
+        FT_Palette_Data_Get
+        FT_Palette_Select
+        FT_Palette_Set_Foreground_Color
+        FT_Get_Color_Glyph_Layer
+        FT_Bitmap_Blend
+
+
+  III. MISCELLANEOUS
+
+    - `TT_Set_MM_Blend' could fail if call repeatedly with the same
+      arguments.
+
+    - The precision of handling deltas in Variation Fonts has been
+      increased.  The problem did only show up with multidimensional
+      designspaces.
+
+    - New function `FT_Library_SetLcdGeometry' to set up the geometry
+      of LCD subpixels.
+
+    - FreeType now uses the `defaultChar' property of PCF fonts to set
+      the glyph for the undefined character at glyph index 0 (as
+      FreeType already does for all other supported font formats).  As
+      a consequence, the order of glyphs of a PCF font if accessed with
+      FreeType can be different now compared to previous versions.
+
+      This change doesn't affect PCF font access with cmaps.
+
+    - `FT_Select_Charmap' has been changed to allow parameter value
+      `FT_ENCODING_NONE', which is valid for BDF, PCF, and Windows FNT
+      formats to access built-in cmaps that don't have a predefined
+      `FT_Encoding' value.
+
+    - A previously reserved field in the `FT_GlyphSlotRec' structure
+      now holds the glyph index.
+
+    - On Win32 platforms, the use of `_DLL' to build the library has
+      been replaced with `DLL_EXPORT' and `DLL_IMPORT'.
+
+    - The usual round of fuzzer bug fixes to better reject malformed
+      fonts.
+
+
+======================================================================
+
 CHANGES BETWEEN 2.9 and 2.9.1
 
   I. IMPORTANT BUG FIXES
 
     - Type  1  fonts  containing   flex  features  were  not  rendered
       correctly (bug introduced in version 2.9).
+
+    - CVE-2018-6942: Older  FreeType versions  can crash  with certain
+      malformed variation fonts.
+
+        http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-6942
 
 
   II. MISCELLANEOUS
@@ -14,6 +74,9 @@ CHANGES BETWEEN 2.9 and 2.9.1
       the  base  module  (and  thus no  longer  configurable  in  file
       `modules.cfg').
 
+    - Emboldening of bitmaps didn't work correctly sometimes,  showing
+      various artifacts (bug introduced in version 2.8.1).
+
     - Use  of  the `freetype-config'  script  to  get compilation  and
       linking  options   is  deprecated   since  it   doesn't  support
       cross-compiling, among other  deficiencies.  Instead, you should
@@ -23,6 +86,17 @@ CHANGES BETWEEN 2.9 and 2.9.1
       default.  For  backwards compatibility,  a new  configure option
       `--enable-freetype-config'   is  provided   that  reverts   this
       decision.
+
+    - The auto-hinter script ranges have  been updated for Unicode 11.
+      No support  for new scripts  have been added, however,  with the
+      exception of Georgian Mtavruli.
+
+    - Support for cmake has been improved.
+
+    - The next  release will  remove support for  Position Independent
+      Code  as  needed  by  systems that  prohibit  automatic  address
+      fixups, such  as BREW.  [Compilation with  modern compilers that
+      use flags like `-fPIC' or `-fPIE' is not affected.]
 
 
 ======================================================================

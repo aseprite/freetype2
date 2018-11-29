@@ -1,19 +1,19 @@
-/***************************************************************************/
-/*                                                                         */
-/*  sfdriver.c                                                             */
-/*                                                                         */
-/*    High-level SFNT driver interface (body).                             */
-/*                                                                         */
-/*  Copyright 1996-2018 by                                                 */
-/*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
-/*                                                                         */
-/*  This file is part of the FreeType project, and may only be used,       */
-/*  modified, and distributed under the terms of the FreeType project      */
-/*  license, LICENSE.TXT.  By continuing to use, modify, or distribute     */
-/*  this file you indicate that you have read the license and              */
-/*  understand and accept it fully.                                        */
-/*                                                                         */
-/***************************************************************************/
+/****************************************************************************
+ *
+ * sfdriver.c
+ *
+ *   High-level SFNT driver interface (body).
+ *
+ * Copyright 1996-2018 by
+ * David Turner, Robert Wilhelm, and Werner Lemberg.
+ *
+ * This file is part of the FreeType project, and may only be used,
+ * modified, and distributed under the terms of the FreeType project
+ * license, LICENSE.TXT.  By continuing to use, modify, or distribute
+ * this file you indicate that you have read the license and
+ * understand and accept it fully.
+ *
+ */
 
 
 #include <ft2build.h>
@@ -25,12 +25,16 @@
 #include "sfdriver.h"
 #include "ttload.h"
 #include "sfobjs.h"
-#include "sfntpic.h"
 
 #include "sferrors.h"
 
 #ifdef TT_CONFIG_OPTION_EMBEDDED_BITMAPS
 #include "ttsbit.h"
+#endif
+
+#ifdef TT_CONFIG_OPTION_COLOR_LAYERS
+#include "ttcolr.h"
+#include "ttcpal.h"
 #endif
 
 #ifdef TT_CONFIG_OPTION_POSTSCRIPT_NAMES
@@ -57,18 +61,18 @@
 #endif
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* The macro FT_COMPONENT is used in trace mode.  It is an implicit      */
-  /* parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log  */
-  /* messages during execution.                                            */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * The macro FT_COMPONENT is used in trace mode.  It is an implicit
+   * parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log
+   * messages during execution.
+   */
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_sfdriver
+#define FT_COMPONENT  sfdriver
 
 
   /*
-   *  SFNT TABLE SERVICE
+   * SFNT TABLE SERVICE
    *
    */
 
@@ -155,7 +159,7 @@
 #ifdef TT_CONFIG_OPTION_POSTSCRIPT_NAMES
 
   /*
-   *  GLYPH DICT SERVICE
+   * GLYPH DICT SERVICE
    *
    */
 
@@ -222,7 +226,7 @@
 
 
   /*
-   *  POSTSCRIPT NAME SERVICE
+   * POSTSCRIPT NAME SERVICE
    *
    */
 
@@ -643,9 +647,9 @@
 
 
   /*
-   *  Find the shortest decimal representation of a 16.16 fixed point
-   *  number.  The function fills `buf' with the result, returning a pointer
-   *  to the position after the representation's last byte.
+   * Find the shortest decimal representation of a 16.16 fixed point
+   * number.  The function fills `buf' with the result, returning a pointer
+   * to the position after the representation's last byte.
    */
 
   static char*
@@ -673,7 +677,7 @@
     if ( fixed < 0 )
     {
       *p++ = '-';
-      fixed = -fixed;
+      fixed = NEG_INT( fixed );
     }
 
     int_part  = ( fixed >> 16 ) & 0xFFFF;
@@ -1073,7 +1077,7 @@
 
 
   /*
-   *  TT CMAP INFO
+   * TT CMAP INFO
    */
   FT_DEFINE_SERVICE_TTCMAPSREC(
     tt_service_get_cmap_info,
@@ -1132,41 +1136,41 @@
 
 
   /*
-   *  SERVICE LIST
+   * SERVICE LIST
    */
 
 #if defined TT_CONFIG_OPTION_POSTSCRIPT_NAMES && defined TT_CONFIG_OPTION_BDF
   FT_DEFINE_SERVICEDESCREC5(
     sfnt_services,
 
-    FT_SERVICE_ID_SFNT_TABLE,           &SFNT_SERVICE_SFNT_TABLE_GET,
-    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &SFNT_SERVICE_PS_NAME_GET,
-    FT_SERVICE_ID_GLYPH_DICT,           &SFNT_SERVICE_GLYPH_DICT_GET,
-    FT_SERVICE_ID_BDF,                  &SFNT_SERVICE_BDF_GET,
-    FT_SERVICE_ID_TT_CMAP,              &TT_SERVICE_CMAP_INFO_GET )
+    FT_SERVICE_ID_SFNT_TABLE,           &sfnt_service_sfnt_table,
+    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &sfnt_service_ps_name,
+    FT_SERVICE_ID_GLYPH_DICT,           &sfnt_service_glyph_dict,
+    FT_SERVICE_ID_BDF,                  &sfnt_service_bdf,
+    FT_SERVICE_ID_TT_CMAP,              &tt_service_get_cmap_info )
 #elif defined TT_CONFIG_OPTION_POSTSCRIPT_NAMES
   FT_DEFINE_SERVICEDESCREC4(
     sfnt_services,
 
-    FT_SERVICE_ID_SFNT_TABLE,           &SFNT_SERVICE_SFNT_TABLE_GET,
-    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &SFNT_SERVICE_PS_NAME_GET,
-    FT_SERVICE_ID_GLYPH_DICT,           &SFNT_SERVICE_GLYPH_DICT_GET,
-    FT_SERVICE_ID_TT_CMAP,              &TT_SERVICE_CMAP_INFO_GET )
+    FT_SERVICE_ID_SFNT_TABLE,           &sfnt_service_sfnt_table,
+    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &sfnt_service_ps_name,
+    FT_SERVICE_ID_GLYPH_DICT,           &sfnt_service_glyph_dict,
+    FT_SERVICE_ID_TT_CMAP,              &tt_service_get_cmap_info )
 #elif defined TT_CONFIG_OPTION_BDF
   FT_DEFINE_SERVICEDESCREC4(
     sfnt_services,
 
-    FT_SERVICE_ID_SFNT_TABLE,           &SFNT_SERVICE_SFNT_TABLE_GET,
-    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &SFNT_SERVICE_PS_NAME_GET,
-    FT_SERVICE_ID_BDF,                  &SFNT_SERVICE_BDF_GET,
-    FT_SERVICE_ID_TT_CMAP,              &TT_SERVICE_CMAP_INFO_GET )
+    FT_SERVICE_ID_SFNT_TABLE,           &sfnt_service_sfnt_table,
+    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &sfnt_service_ps_name,
+    FT_SERVICE_ID_BDF,                  &sfnt_service_bdf,
+    FT_SERVICE_ID_TT_CMAP,              &tt_service_get_cmap_info )
 #else
   FT_DEFINE_SERVICEDESCREC3(
     sfnt_services,
 
-    FT_SERVICE_ID_SFNT_TABLE,           &SFNT_SERVICE_SFNT_TABLE_GET,
-    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &SFNT_SERVICE_PS_NAME_GET,
-    FT_SERVICE_ID_TT_CMAP,              &TT_SERVICE_CMAP_INFO_GET )
+    FT_SERVICE_ID_SFNT_TABLE,           &sfnt_service_sfnt_table,
+    FT_SERVICE_ID_POSTSCRIPT_FONT_NAME, &sfnt_service_ps_name,
+    FT_SERVICE_ID_TT_CMAP,              &tt_service_get_cmap_info )
 #endif
 
 
@@ -1174,21 +1178,9 @@
   sfnt_get_interface( FT_Module    module,
                       const char*  module_interface )
   {
-    /* SFNT_SERVICES_GET dereferences `library' in PIC mode */
-#ifdef FT_CONFIG_OPTION_PIC
-    FT_Library  library;
-
-
-    if ( !module )
-      return NULL;
-    library = module->library;
-    if ( !library )
-      return NULL;
-#else
     FT_UNUSED( module );
-#endif
 
-    return ft_service_list_lookup( SFNT_SERVICES_GET, module_interface );
+    return ft_service_list_lookup( sfnt_services, module_interface );
   }
 
 
@@ -1196,6 +1188,12 @@
 #define PUT_EMBEDDED_BITMAPS( a )  a
 #else
 #define PUT_EMBEDDED_BITMAPS( a )  NULL
+#endif
+
+#ifdef TT_CONFIG_OPTION_COLOR_LAYERS
+#define PUT_COLOR_LAYERS( a )  a
+#else
+#define PUT_COLOR_LAYERS( a )  NULL
 #endif
 
 #ifdef TT_CONFIG_OPTION_POSTSCRIPT_NAMES
@@ -1256,9 +1254,24 @@
                             /* TT_Free_Table_Func      free_eblc       */
 
     PUT_EMBEDDED_BITMAPS( tt_face_set_sbit_strike     ),
-                            /* TT_Set_SBit_Strike_Func set_sbit_strike */
+                   /* TT_Set_SBit_Strike_Func      set_sbit_strike     */
     PUT_EMBEDDED_BITMAPS( tt_face_load_strike_metrics ),
-                    /* TT_Load_Strike_Metrics_Func load_strike_metrics */
+                   /* TT_Load_Strike_Metrics_Func  load_strike_metrics */
+
+    PUT_COLOR_LAYERS( tt_face_load_cpal ),
+                            /* TT_Load_Table_Func      load_cpal       */
+    PUT_COLOR_LAYERS( tt_face_load_colr ),
+                            /* TT_Load_Table_Func      load_colr       */
+    PUT_COLOR_LAYERS( tt_face_free_cpal ),
+                            /* TT_Free_Table_Func      free_cpal       */
+    PUT_COLOR_LAYERS( tt_face_free_colr ),
+                            /* TT_Free_Table_Func      free_colr       */
+    PUT_COLOR_LAYERS( tt_face_palette_set ),
+                            /* TT_Set_Palette_Func     set_palette     */
+    PUT_COLOR_LAYERS( tt_face_get_colr_layer ),
+                            /* TT_Get_Colr_Layer_Func  get_colr_layer  */
+    PUT_COLOR_LAYERS( tt_face_colr_blend_layer ),
+                            /* TT_Blend_Colr_Func      colr_blend      */
 
     tt_face_get_metrics,    /* TT_Get_Metrics_Func     get_metrics     */
 
@@ -1277,7 +1290,7 @@
     0x10000L,   /* driver version 1.0                     */
     0x20000L,   /* driver requires FreeType 2.0 or higher */
 
-    (const void*)&SFNT_INTERFACE_GET,  /* module specific interface */
+    (const void*)&sfnt_interface,  /* module specific interface */
 
     (FT_Module_Constructor)NULL,               /* module_init   */
     (FT_Module_Destructor) NULL,               /* module_done   */

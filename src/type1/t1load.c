@@ -1,63 +1,63 @@
-/***************************************************************************/
-/*                                                                         */
-/*  t1load.c                                                               */
-/*                                                                         */
-/*    Type 1 font loader (body).                                           */
-/*                                                                         */
-/*  Copyright 1996-2018 by                                                 */
-/*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
-/*                                                                         */
-/*  This file is part of the FreeType project, and may only be used,       */
-/*  modified, and distributed under the terms of the FreeType project      */
-/*  license, LICENSE.TXT.  By continuing to use, modify, or distribute     */
-/*  this file you indicate that you have read the license and              */
-/*  understand and accept it fully.                                        */
-/*                                                                         */
-/***************************************************************************/
+/****************************************************************************
+ *
+ * t1load.c
+ *
+ *   Type 1 font loader (body).
+ *
+ * Copyright 1996-2018 by
+ * David Turner, Robert Wilhelm, and Werner Lemberg.
+ *
+ * This file is part of the FreeType project, and may only be used,
+ * modified, and distributed under the terms of the FreeType project
+ * license, LICENSE.TXT.  By continuing to use, modify, or distribute
+ * this file you indicate that you have read the license and
+ * understand and accept it fully.
+ *
+ */
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* This is the new and improved Type 1 data loader for FreeType 2.  The  */
-  /* old loader has several problems: it is slow, complex, difficult to    */
-  /* maintain, and contains incredible hacks to make it accept some        */
-  /* ill-formed Type 1 fonts without hiccup-ing.  Moreover, about 5% of    */
-  /* the Type 1 fonts on my machine still aren't loaded correctly by it.   */
-  /*                                                                       */
-  /* This version is much simpler, much faster and also easier to read and */
-  /* maintain by a great order of magnitude.  The idea behind it is to     */
-  /* _not_ try to read the Type 1 token stream with a state machine (i.e.  */
-  /* a Postscript-like interpreter) but rather to perform simple pattern   */
-  /* matching.                                                             */
-  /*                                                                       */
-  /* Indeed, nearly all data definitions follow a simple pattern like      */
-  /*                                                                       */
-  /*  ... /Field <data> ...                                                */
-  /*                                                                       */
-  /* where <data> can be a number, a boolean, a string, or an array of     */
-  /* numbers.  There are a few exceptions, namely the encoding, font name, */
-  /* charstrings, and subrs; they are handled with a special pattern       */
-  /* matching routine.                                                     */
-  /*                                                                       */
-  /* All other common cases are handled very simply.  The matching rules   */
-  /* are defined in the file `t1tokens.h' through the use of several       */
-  /* macros calls PARSE_XXX.  This file is included twice here; the first  */
-  /* time to generate parsing callback functions, the second time to       */
-  /* generate a table of keywords (with pointers to the associated         */
-  /* callback functions).                                                  */
-  /*                                                                       */
-  /* The function `parse_dict' simply scans *linearly* a given dictionary  */
-  /* (either the top-level or private one) and calls the appropriate       */
-  /* callback when it encounters an immediate keyword.                     */
-  /*                                                                       */
-  /* This is by far the fastest way one can find to parse and read all     */
-  /* data.                                                                 */
-  /*                                                                       */
-  /* This led to tremendous code size reduction.  Note that later, the     */
-  /* glyph loader will also be _greatly_ simplified, and the automatic     */
-  /* hinter will replace the clumsy `t1hinter'.                            */
-  /*                                                                       */
-  /*************************************************************************/
+  /**************************************************************************
+   *
+   * This is the new and improved Type 1 data loader for FreeType 2.  The
+   * old loader has several problems: it is slow, complex, difficult to
+   * maintain, and contains incredible hacks to make it accept some
+   * ill-formed Type 1 fonts without hiccup-ing.  Moreover, about 5% of
+   * the Type 1 fonts on my machine still aren't loaded correctly by it.
+   *
+   * This version is much simpler, much faster and also easier to read and
+   * maintain by a great order of magnitude.  The idea behind it is to
+   * _not_ try to read the Type 1 token stream with a state machine (i.e.
+   * a Postscript-like interpreter) but rather to perform simple pattern
+   * matching.
+   *
+   * Indeed, nearly all data definitions follow a simple pattern like
+   *
+   * ... /Field <data> ...
+   *
+   * where <data> can be a number, a boolean, a string, or an array of
+   * numbers.  There are a few exceptions, namely the encoding, font name,
+   * charstrings, and subrs; they are handled with a special pattern
+   * matching routine.
+   *
+   * All other common cases are handled very simply.  The matching rules
+   * are defined in the file `t1tokens.h' through the use of several
+   * macros calls PARSE_XXX.  This file is included twice here; the first
+   * time to generate parsing callback functions, the second time to
+   * generate a table of keywords (with pointers to the associated
+   * callback functions).
+   *
+   * The function `parse_dict' simply scans *linearly* a given dictionary
+   * (either the top-level or private one) and calls the appropriate
+   * callback when it encounters an immediate keyword.
+   *
+   * This is by far the fastest way one can find to parse and read all
+   * data.
+   *
+   * This led to tremendous code size reduction.  Note that later, the
+   * glyph loader will also be _greatly_ simplified, and the automatic
+   * hinter will replace the clumsy `t1hinter'.
+   *
+   */
 
 
 #include <ft2build.h>
@@ -79,14 +79,14 @@
 #endif
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* The macro FT_COMPONENT is used in trace mode.  It is an implicit      */
-  /* parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log  */
-  /* messages during execution.                                            */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * The macro FT_COMPONENT is used in trace mode.  It is an implicit
+   * parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log
+   * messages during execution.
+   */
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_t1load
+#define FT_COMPONENT  t1load
 
 
 #ifndef T1_CONFIG_OPTION_NO_MM_SUPPORT
@@ -222,11 +222,11 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* Given a normalized (blend) coordinate, figure out the design          */
-  /* coordinate appropriate for that value.                                */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * Given a normalized (blend) coordinate, figure out the design
+   * coordinate appropriate for that value.
+   */
   static FT_Fixed
   mm_axis_unmap( PS_DesignMap  axismap,
                  FT_Fixed      ncv )
@@ -251,11 +251,11 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* Given a vector of weights, one for each design, figure out the        */
-  /* normalized axis coordinates which gave rise to those weights.         */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * Given a vector of weights, one for each design, figure out the
+   * normalized axis coordinates which gave rise to those weights.
+   */
   static void
   mm_weights_unmap( FT_Fixed*  weights,
                     FT_Fixed*  axiscoords,
@@ -293,11 +293,11 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* Just a wrapper around T1_Get_Multi_Master to support the different    */
-  /*  arguments needed by the GX var distortable fonts.                    */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * Just a wrapper around T1_Get_Multi_Master to support the different
+   * arguments needed by the GX var distortable fonts.
+   */
   FT_LOCAL_DEF( FT_Error )
   T1_Get_MM_Var( T1_Face      face,
                  FT_MM_Var*  *master )
@@ -348,16 +348,13 @@
         mmvar->axis[i].tag = FT_MAKE_TAG( 'o', 'p', 's', 'z' );
     }
 
-    if ( blend->num_designs == ( 1U << blend->num_axis ) )
-    {
-      mm_weights_unmap( blend->default_weight_vector,
-                        axiscoords,
-                        blend->num_axis );
+    mm_weights_unmap( blend->default_weight_vector,
+                      axiscoords,
+                      blend->num_axis );
 
-      for ( i = 0; i < mmaster.num_axis; i++ )
-        mmvar->axis[i].def = mm_axis_unmap( &blend->design_map[i],
-                                            axiscoords[i] );
-    }
+    for ( i = 0; i < mmaster.num_axis; i++ )
+      mmvar->axis[i].def = mm_axis_unmap( &blend->design_map[i],
+                                          axiscoords[i] );
 
     *master = mmvar;
 
@@ -573,11 +570,11 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* Just a wrapper around T1_Set_MM_Design to support the different       */
-  /* arguments needed by the GX var distortable fonts.                     */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * Just a wrapper around T1_Set_MM_Design to support the different
+   * arguments needed by the GX var distortable fonts.
+   */
   FT_LOCAL_DEF( FT_Error )
   T1_Set_Var_Design( T1_Face    face,
                      FT_UInt    num_coords,
@@ -719,6 +716,8 @@
     if ( error )
       goto Exit;
 
+    FT_TRACE4(( " [" ));
+
     blend  = face->blend;
     memory = face->root.memory;
 
@@ -741,11 +740,13 @@
         goto Exit;
       }
 
+      FT_TRACE4(( " /%.*s", len, token->start ));
+
       name = (FT_Byte*)blend->axis_names[n];
       if ( name )
       {
         FT_TRACE0(( "parse_blend_axis_types:"
-                    " overwriting axis name `%s' with `%*.s'\n",
+                    " overwriting axis name `%s' with `%.*s'\n",
                     name, len, token->start ));
         FT_FREE( name );
       }
@@ -757,6 +758,8 @@
       FT_MEM_COPY( name, token->start, len );
       name[len] = '\0';
     }
+
+    FT_TRACE4(( "]\n" ));
 
   Exit:
     loader->parser.root.error = error;
@@ -802,6 +805,8 @@
       blend    = face->blend;
       num_axis = 0;  /* make compiler happy */
 
+      FT_TRACE4(( " [" ));
+
       for ( n = 0; n < num_designs; n++ )
       {
         T1_TokenRec  axis_tokens[T1_MAX_MM_AXIS];
@@ -842,6 +847,7 @@
         }
 
         /* now read each axis token into the design position */
+        FT_TRACE4(( " [" )) ;
         for ( axis = 0; axis < n_axis; axis++ )
         {
           T1_Token  token2 = axis_tokens + axis;
@@ -850,8 +856,12 @@
           parser->root.cursor = token2->start;
           parser->root.limit  = token2->limit;
           blend->design_pos[n][axis] = T1_ToFixed( parser, 0 );
+          FT_TRACE4(( " %f", (double)blend->design_pos[n][axis] / 65536 ));
         }
+        FT_TRACE4(( "]" )) ;
       }
+
+      FT_TRACE4(( "]\n" ));
 
       loader->parser.root.cursor = old_cursor;
       loader->parser.root.limit  = old_limit;
@@ -899,6 +909,8 @@
       goto Exit;
     blend = face->blend;
 
+    FT_TRACE4(( " [" ));
+
     /* now read each axis design map */
     for ( n = 0; n < num_axis; n++ )
     {
@@ -914,6 +926,8 @@
       parser->root.limit  = axis_token->limit;
       T1_ToTokenArray( parser, point_tokens,
                        T1_MAX_MM_MAP_POINTS, &num_points );
+
+      FT_TRACE4(( " [" ));
 
       if ( num_points <= 0 || num_points > T1_MAX_MM_MAP_POINTS )
       {
@@ -948,8 +962,16 @@
 
         map->design_points[p] = T1_ToInt( parser );
         map->blend_points [p] = T1_ToFixed( parser, 0 );
+
+        FT_TRACE4(( " [%d %f]",
+                    map->design_points[p],
+                    (double)map->blend_points[p] / 65536 ));
       }
+
+      FT_TRACE4(( "]" ));
     }
+
+    FT_TRACE4(( "]\n" ));
 
     parser->root.cursor = old_cursor;
     parser->root.limit  = old_limit;
@@ -1010,6 +1032,8 @@
     old_cursor = parser->root.cursor;
     old_limit  = parser->root.limit;
 
+    FT_TRACE4(( "[" ));
+
     for ( n = 0; n < num_designs; n++ )
     {
       token = design_tokens + n;
@@ -1018,7 +1042,11 @@
 
       blend->default_weight_vector[n] =
       blend->weight_vector[n]         = T1_ToFixed( parser, 0 );
+
+      FT_TRACE4(( " %f", (double)blend->weight_vector[n] / 65536 ));
     }
+
+    FT_TRACE4(( "]\n" ));
 
     parser->root.cursor = old_cursor;
     parser->root.limit  = old_limit;
@@ -1034,8 +1062,16 @@
   parse_buildchar( T1_Face    face,
                    T1_Loader  loader )
   {
+    FT_UInt  i;
+
+
     face->len_buildchar = (FT_UInt)T1_ToFixedArray( &loader->parser,
                                                     0, NULL, 0 );
+    FT_TRACE4(( " [" ));
+    for ( i = 0; i < face->len_buildchar; i++ )
+      FT_TRACE4(( " 0" ));
+
+    FT_TRACE4(( "]\n" ));
     return;
   }
 
@@ -1071,6 +1107,8 @@
     /* if the keyword has a dedicated callback, call it */
     if ( field->type == T1_FIELD_TYPE_CALLBACK )
     {
+      FT_TRACE4(( "  %s", field->ident ));
+
       field->reader( (FT_Face)face, loader );
       error = loader->parser.root.error;
       goto Exit;
@@ -1148,6 +1186,8 @@
       max_objects  = 0;
     }
 
+    FT_TRACE4(( "  %s", field->ident ));
+
     if ( *objects )
     {
       if ( field->type == T1_FIELD_TYPE_INTEGER_ARRAY ||
@@ -1167,6 +1207,8 @@
       error = FT_Err_Ok;
     }
 
+    FT_TRACE4(( "\n" ));
+
   Exit:
     return error;
   }
@@ -1179,6 +1221,8 @@
     FT_UNUSED( face );
 
     loader->keywords_encountered |= T1_PRIVATE;
+
+    FT_TRACE4(( "\n" ));
   }
 
 
@@ -1258,6 +1302,14 @@
       return;
     }
 
+    FT_TRACE4(( " [%f %f %f %f %f %f]\n",
+                (double)temp[0] / 65536 / 1000,
+                (double)temp[1] / 65536 / 1000,
+                (double)temp[2] / 65536 / 1000,
+                (double)temp[3] / 65536 / 1000,
+                (double)temp[4] / 65536 / 1000,
+                (double)temp[5] / 65536 / 1000 ));
+
     temp_scale = FT_ABS( temp[3] );
 
     if ( temp_scale == 0 )
@@ -1280,11 +1332,17 @@
       temp[5] = FT_DivFix( temp[5], temp_scale );
       temp[3] = temp[3] < 0 ? -0x10000L : 0x10000L;
     }
-
     matrix->xx = temp[0];
     matrix->yx = temp[1];
     matrix->xy = temp[2];
     matrix->yy = temp[3];
+
+    if ( !FT_Matrix_Check( matrix ) )
+    {
+      FT_ERROR(( "t1_parse_font_matrix: invalid font matrix\n" ));
+      parser->root.error = FT_THROW( Invalid_File_Format );
+      return;
+    }
 
     /* note that the offsets must be expressed in integer font units */
     offset->x = temp[4] >> 16;
@@ -1494,6 +1552,15 @@
         T1_Skip_Spaces( parser );
       }
 
+#ifdef FT_DEBUG_LEVEL_TRACE
+      FT_TRACE4(( " [" ));
+
+      /* XXX show encoding vector */
+      FT_TRACE4(( "..." ));
+
+      FT_TRACE4(( "]\n" ));
+#endif
+
       face->type1.encoding_type = T1_ENCODING_TYPE_ARRAY;
       parser->root.cursor       = cur;
     }
@@ -1504,18 +1571,30 @@
     {
       if ( cur + 17 < limit                                            &&
            ft_strncmp( (const char*)cur, "StandardEncoding", 16 ) == 0 )
+      {
         face->type1.encoding_type = T1_ENCODING_TYPE_STANDARD;
+        FT_TRACE4(( " StandardEncoding\n" ));
+      }
 
       else if ( cur + 15 < limit                                          &&
                 ft_strncmp( (const char*)cur, "ExpertEncoding", 14 ) == 0 )
+      {
         face->type1.encoding_type = T1_ENCODING_TYPE_EXPERT;
+        FT_TRACE4(( " ExpertEncoding\n" ));
+      }
 
       else if ( cur + 18 < limit                                             &&
                 ft_strncmp( (const char*)cur, "ISOLatin1Encoding", 17 ) == 0 )
+      {
         face->type1.encoding_type = T1_ENCODING_TYPE_ISOLATIN1;
+        FT_TRACE4(( " ISOLatin1Encoding\n" ));
+      }
 
       else
+      {
         parser->root.error = FT_ERR( Ignore );
+        FT_TRACE4(( "<unknown>\n" ));
+      }
     }
   }
 
@@ -1695,6 +1774,15 @@
 
     if ( !loader->num_subrs )
       loader->num_subrs = num_subrs;
+
+#ifdef FT_DEBUG_LEVEL_TRACE
+      FT_TRACE4(( " <" ));
+
+      /* XXX show subrs? */
+      FT_TRACE4(( "%d elements", num_subrs ));
+
+      FT_TRACE4(( ">\n" ));
+#endif
 
     return;
 
@@ -2017,6 +2105,15 @@
       loader->num_glyphs += 1;
     }
 
+#ifdef FT_DEBUG_LEVEL_TRACE
+      FT_TRACE4(( " <" ));
+
+      /* XXX show charstrings? */
+      FT_TRACE4(( "%d elements", loader->num_glyphs ));
+
+      FT_TRACE4(( ">\n" ));
+#endif
+
     return;
 
   Fail:
@@ -2024,12 +2121,12 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* Define the token field static variables.  This is a set of            */
-  /* T1_FieldRec variables.                                                */
-  /*                                                                       */
-  /*************************************************************************/
+  /**************************************************************************
+   *
+   * Define the token field static variables.  This is a set of
+   * T1_FieldRec variables.
+   *
+   */
 
 
   static
@@ -2216,6 +2313,7 @@
                     ? T1_FIELD_DICT_PRIVATE
                     : T1_FIELD_DICT_FONTDICT;
 
+
               if ( !( dict & keyword->dict ) )
               {
                 FT_TRACE1(( "parse_dict: found `%s' but ignoring it"
@@ -2330,6 +2428,7 @@
     if ( error )
       goto Exit;
 
+    FT_TRACE4(( " top dictionary:\n" ));
     error = parse_dict( face, &loader,
                         parser->base_dict, parser->base_len );
     if ( error )
@@ -2339,6 +2438,7 @@
     if ( error )
       goto Exit;
 
+    FT_TRACE4(( " private dictionary:\n" ));
     error = parse_dict( face, &loader,
                         parser->private_dict, parser->private_len );
     if ( error )
@@ -2348,6 +2448,16 @@
     priv->num_blue_values &= ~1;
 
 #ifndef T1_CONFIG_OPTION_NO_MM_SUPPORT
+
+    /* we don't support Multiple Master fonts with intermediate designs; */
+    /* this implies that `num_designs' must be equal to `2^^num_axis'    */
+    if ( face->blend                                                 &&
+         face->blend->num_designs != ( 1U << face->blend->num_axis ) )
+    {
+      FT_ERROR(( "T1_Open_Face:"
+                 " number-of-designs != 2 ^^ number-of-axes\n" ));
+      T1_Done_Blend( face );
+    }
 
     if ( face->blend                                                     &&
          face->blend->num_default_design_vector != 0                     &&
@@ -2491,6 +2601,24 @@
       type1->encoding.code_first = min_char;
       type1->encoding.code_last  = max_char;
       type1->encoding.num_chars  = loader.num_chars;
+    }
+
+    /* some sanitizing to avoid overflows later on; */
+    /* the upper limits are ad-hoc values           */
+    if ( priv->blue_shift > 1000 || priv->blue_shift < 0 )
+    {
+      FT_TRACE2(( "T1_Open_Face:"
+                  " setting unlikely BlueShift value %d to default (7)\n",
+                  priv->blue_shift ));
+      priv->blue_shift = 7;
+    }
+
+    if ( priv->blue_fuzz > 1000 || priv->blue_fuzz < 0 )
+    {
+      FT_TRACE2(( "T1_Open_Face:"
+                  " setting unlikely BlueFuzz value %d to default (1)\n",
+                  priv->blue_fuzz ));
+      priv->blue_fuzz = 1;
     }
 
   Exit:

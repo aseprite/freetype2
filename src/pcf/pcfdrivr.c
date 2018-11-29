@@ -45,7 +45,7 @@ THE SOFTWARE.
 #include "pcfutil.h"
 
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_pcfread
+#define FT_COMPONENT  pcfread
 
 #include FT_SERVICE_BDF_H
 #include FT_SERVICE_FONT_FORMAT_H
@@ -53,16 +53,20 @@ THE SOFTWARE.
 #include FT_DRIVER_H
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* The macro FT_COMPONENT is used in trace mode.  It is an implicit      */
-  /* parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log  */
-  /* messages during execution.                                            */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * The macro FT_COMPONENT is used in trace mode.  It is an implicit
+   * parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log
+   * messages during execution.
+   */
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_pcfdriver
+#define FT_COMPONENT  pcfdriver
 
 
+  /*
+   * This file uses X11 terminology for PCF data; an `encoding' in X11 speak
+   * is the same as a `character code' in FreeType speak.
+   */
   typedef struct  PCF_CMapRec_
   {
     FT_CMapRec    root;
@@ -119,11 +123,11 @@ THE SOFTWARE.
 
 
       mid  = ( min + max ) >> 1;
-      code = (FT_ULong)encodings[mid].enc;
+      code = encodings[mid].enc;
 
       if ( charcode == code )
       {
-        result = encodings[mid].glyph + 1;
+        result = encodings[mid].glyph;
         break;
       }
 
@@ -157,11 +161,11 @@ THE SOFTWARE.
 
 
       mid  = ( min + max ) >> 1;
-      code = (FT_ULong)encodings[mid].enc;
+      code = encodings[mid].enc;
 
       if ( charcode == code )
       {
-        result = encodings[mid].glyph + 1;
+        result = encodings[mid].glyph;
         goto Exit;
       }
 
@@ -174,8 +178,8 @@ THE SOFTWARE.
     charcode = 0;
     if ( min < cmap->num_encodings )
     {
-      charcode = (FT_ULong)encodings[min].enc;
-      result   = encodings[min].glyph + 1;
+      charcode = encodings[min].enc;
+      result   = encodings[min].glyph;
     }
 
   Exit:
@@ -187,6 +191,7 @@ THE SOFTWARE.
     }
     else
       *acharcode = (FT_UInt32)charcode;
+
     return result;
   }
 
@@ -512,9 +517,6 @@ THE SOFTWARE.
 
     stream = face->root.stream;
 
-    if ( glyph_index > 0 )
-      glyph_index--;
-
     metric = face->metrics + glyph_index;
 
     bitmap->rows       = (unsigned int)( metric->ascent +
@@ -601,11 +603,11 @@ THE SOFTWARE.
   }
 
 
- /*
-  *
-  *  BDF SERVICE
-  *
-  */
+  /*
+   *
+   * BDF SERVICE
+   *
+   */
 
   static FT_Error
   pcf_get_bdf_property( PCF_Face          face,
@@ -633,9 +635,9 @@ THE SOFTWARE.
         }
 
         /*
-         *  The PCF driver loads all properties as signed integers.
-         *  This really doesn't seem to be a problem, because this is
-         *  sufficient for any meaningful values.
+         * The PCF driver loads all properties as signed integers.
+         * This really doesn't seem to be a problem, because this is
+         * sufficient for any meaningful values.
          */
         aproperty->type      = BDF_PROPERTY_TYPE_INTEGER;
         aproperty->u.integer = (FT_Int32)prop->value.l;
@@ -668,7 +670,7 @@ THE SOFTWARE.
 
 
   /*
-   *  PROPERTY SERVICE
+   * PROPERTY SERVICE
    *
    */
   static FT_Error
@@ -777,11 +779,11 @@ THE SOFTWARE.
     (FT_Properties_GetFunc)pcf_property_get )     /* get_property */
 
 
- /*
-  *
-  *  SERVICE LIST
-  *
-  */
+  /*
+   *
+   * SERVICE LIST
+   *
+   */
 
   static const FT_ServiceDescRec  pcf_services[] =
   {

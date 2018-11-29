@@ -1,19 +1,19 @@
-/***************************************************************************/
-/*                                                                         */
-/*  ftobjs.c                                                               */
-/*                                                                         */
-/*    The FreeType private base classes (body).                            */
-/*                                                                         */
-/*  Copyright 1996-2018 by                                                 */
-/*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
-/*                                                                         */
-/*  This file is part of the FreeType project, and may only be used,       */
-/*  modified, and distributed under the terms of the FreeType project      */
-/*  license, LICENSE.TXT.  By continuing to use, modify, or distribute     */
-/*  this file you indicate that you have read the license and              */
-/*  understand and accept it fully.                                        */
-/*                                                                         */
-/***************************************************************************/
+/****************************************************************************
+ *
+ * ftobjs.c
+ *
+ *   The FreeType private base classes (body).
+ *
+ * Copyright 1996-2018 by
+ * David Turner, Robert Wilhelm, and Werner Lemberg.
+ *
+ * This file is part of the FreeType project, and may only be used,
+ * modified, and distributed under the terms of the FreeType project
+ * license, LICENSE.TXT.  By continuing to use, modify, or distribute
+ * this file you indicate that you have read the license and
+ * understand and accept it fully.
+ *
+ */
 
 
 #include <ft2build.h>
@@ -78,6 +78,18 @@
 #if defined( _MSC_VER )
 #pragma warning( pop )
 #endif
+
+  static const char* const  pixel_modes[] =
+  {
+    "none",
+    "monochrome bitmap",
+    "gray 8-bit bitmap",
+    "gray 2-bit bitmap",
+    "gray 4-bit bitmap",
+    "LCD 8-bit bitmap",
+    "vertical LCD 8-bit bitmap",
+    "BGRA 32-bit color image bitmap"
+  };
 
 #endif /* FT_DEBUG_LEVEL_TRACE */
 
@@ -259,14 +271,14 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* The macro FT_COMPONENT is used in trace mode.  It is an implicit      */
-  /* parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log  */
-  /* messages during execution.                                            */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * The macro FT_COMPONENT is used in trace mode.  It is an implicit
+   * parameter of the FT_TRACE() and FT_ERROR() macros, used to print/log
+   * messages during execution.
+   */
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_objs
+#define FT_COMPONENT  objs
 
 
   /*************************************************************************/
@@ -374,41 +386,35 @@
       /* unless the rounded box can collapse for a narrow glyph */
       if ( cbox.xMax - cbox.xMin < 64 )
       {
-        cbox.xMin = FT_PIX_FLOOR( cbox.xMin );
-        cbox.xMax = FT_PIX_CEIL_LONG( cbox.xMax );
+        cbox.xMin = ( cbox.xMin + cbox.xMax ) / 2 - 32;
+        cbox.xMax = cbox.xMin + 64;
       }
-      else
-      {
-        cbox.xMin = FT_PIX_ROUND_LONG( cbox.xMin );
-        cbox.xMax = FT_PIX_ROUND_LONG( cbox.xMax );
-      }
+
+      cbox.xMin = FT_PIX_ROUND_LONG( cbox.xMin );
+      cbox.xMax = FT_PIX_ROUND_LONG( cbox.xMax );
 
       if ( cbox.yMax - cbox.yMin < 64 )
       {
-        cbox.yMin = FT_PIX_FLOOR( cbox.yMin );
-        cbox.yMax = FT_PIX_CEIL_LONG( cbox.yMax );
+        cbox.yMin = ( cbox.yMin + cbox.yMax ) / 2 - 32;
+        cbox.yMax = cbox.yMin + 64;
       }
-      else
-      {
-        cbox.yMin = FT_PIX_ROUND_LONG( cbox.yMin );
-        cbox.yMax = FT_PIX_ROUND_LONG( cbox.yMax );
-      }
-#else
-      cbox.xMin = FT_PIX_FLOOR( cbox.xMin );
-      cbox.yMin = FT_PIX_FLOOR( cbox.yMin );
-      cbox.xMax = FT_PIX_CEIL_LONG( cbox.xMax );
-      cbox.yMax = FT_PIX_CEIL_LONG( cbox.yMax );
-#endif
+
+      cbox.yMin = FT_PIX_ROUND_LONG( cbox.yMin );
+      cbox.yMax = FT_PIX_ROUND_LONG( cbox.yMax );
+
       break;
+#else
+      goto Round;
+#endif
 
     case FT_RENDER_MODE_LCD:
       pixel_mode = FT_PIXEL_MODE_LCD;
-      ft_lcd_padding( &cbox.xMin, &cbox.xMax, slot );
+      ft_lcd_padding( &cbox, slot, mode );
       goto Round;
 
     case FT_RENDER_MODE_LCD_V:
       pixel_mode = FT_PIXEL_MODE_LCD_V;
-      ft_lcd_padding( &cbox.yMin, &cbox.yMax, slot );
+      ft_lcd_padding( &cbox, slot, mode );
       goto Round;
 
     case FT_RENDER_MODE_NORMAL:
@@ -846,7 +852,7 @@
         /* only the new Adobe engine (for both CFF and Type 1) is `light'; */
         /* we use `strstr' to catch both `Type 1' and `CID Type 1'         */
         is_light_type1 =
-          ft_strstr( FT_Get_Font_Format( face ), "Type 1" ) != NULL   &&
+          ft_strstr( FT_Get_Font_Format( face ), "Type 1" ) != NULL &&
           ((PS_Driver)driver)->hinting_engine == FT_HINTING_ADOBE;
 
         /* the check for `num_locations' assures that we actually    */
@@ -995,6 +1001,9 @@
       }
     }
 
+    slot->glyph_index          = glyph_index;
+    slot->internal->load_flags = load_flags;
+
     /* do we need to render the image or preset the bitmap now? */
     if ( !error                                    &&
          ( load_flags & FT_LOAD_NO_SCALE ) == 0    &&
@@ -1014,17 +1023,21 @@
         ft_glyphslot_preset_bitmap( slot, mode, NULL );
     }
 
-    FT_TRACE5(( "FT_Load_Glyph: index %d, flags %x\n",
-                glyph_index, load_flags               ));
+#ifdef FT_DEBUG_LEVEL_TRACE
+    FT_TRACE5(( "FT_Load_Glyph: index %d, flags 0x%x\n",
+                glyph_index, load_flags ));
     FT_TRACE5(( "  x advance: %f\n", slot->advance.x / 64.0 ));
     FT_TRACE5(( "  y advance: %f\n", slot->advance.y / 64.0 ));
     FT_TRACE5(( "  linear x advance: %f\n",
                 slot->linearHoriAdvance / 65536.0 ));
     FT_TRACE5(( "  linear y advance: %f\n",
                 slot->linearVertAdvance / 65536.0 ));
-    FT_TRACE5(( "  bitmap %dx%d, mode %d\n",
-                slot->bitmap.width, slot->bitmap.rows,
-                slot->bitmap.pixel_mode               ));
+    FT_TRACE5(( "  bitmap %dx%d, %s (mode %d)\n",
+                slot->bitmap.width,
+                slot->bitmap.rows,
+                pixel_modes[slot->bitmap.pixel_mode],
+                slot->bitmap.pixel_mode ));
+#endif
 
   Exit:
     return error;
@@ -1162,20 +1175,20 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* <Function>                                                            */
-  /*    find_unicode_charmap                                               */
-  /*                                                                       */
-  /* <Description>                                                         */
-  /*    This function finds a Unicode charmap, if there is one.            */
-  /*    And if there is more than one, it tries to favour the more         */
-  /*    extensive one, i.e., one that supports UCS-4 against those which   */
-  /*    are limited to the BMP (said UCS-2 encoding.)                      */
-  /*                                                                       */
-  /*    This function is called from open_face() (just below), and also    */
-  /*    from FT_Select_Charmap( ..., FT_ENCODING_UNICODE ).                */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * @Function:
+   *   find_unicode_charmap
+   *
+   * @Description:
+   *   This function finds a Unicode charmap, if there is one.
+   *   And if there is more than one, it tries to favour the more
+   *   extensive one, i.e., one that supports UCS-4 against those which
+   *   are limited to the BMP (said UCS-2 encoding.)
+   *
+   *   This function is called from open_face() (just below), and also
+   *   from FT_Select_Charmap( ..., FT_ENCODING_UNICODE ).
+   */
   static FT_Error
   find_unicode_charmap( FT_Face  face )
   {
@@ -1192,26 +1205,26 @@
       return FT_THROW( Invalid_CharMap_Handle );
 
     /*
-     *  The original TrueType specification(s) only specified charmap
-     *  formats that are capable of mapping 8 or 16 bit character codes to
-     *  glyph indices.
+     * The original TrueType specification(s) only specified charmap
+     * formats that are capable of mapping 8 or 16 bit character codes to
+     * glyph indices.
      *
-     *  However, recent updates to the Apple and OpenType specifications
-     *  introduced new formats that are capable of mapping 32-bit character
-     *  codes as well.  And these are already used on some fonts, mainly to
-     *  map non-BMP Asian ideographs as defined in Unicode.
+     * However, recent updates to the Apple and OpenType specifications
+     * introduced new formats that are capable of mapping 32-bit character
+     * codes as well.  And these are already used on some fonts, mainly to
+     * map non-BMP Asian ideographs as defined in Unicode.
      *
-     *  For compatibility purposes, these fonts generally come with
-     *  *several* Unicode charmaps:
+     * For compatibility purposes, these fonts generally come with
+     * *several* Unicode charmaps:
      *
-     *   - One of them in the "old" 16-bit format, that cannot access
-     *     all glyphs in the font.
+     * - One of them in the "old" 16-bit format, that cannot access
+     *   all glyphs in the font.
      *
-     *   - Another one in the "new" 32-bit format, that can access all
-     *     the glyphs.
+     * - Another one in the "new" 32-bit format, that can access all
+     *   the glyphs.
      *
-     *  This function has been written to always favor a 32-bit charmap
-     *  when found.  Otherwise, a 16-bit one is returned when found.
+     * This function has been written to always favor a 32-bit charmap
+     * when found.  Otherwise, a 16-bit one is returned when found.
      */
 
     /* Since the `interesting' table, with IDs (3,10), is normally the */
@@ -1255,15 +1268,15 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* <Function>                                                            */
-  /*    find_variant_selector_charmap                                      */
-  /*                                                                       */
-  /* <Description>                                                         */
-  /*    This function finds the variant selector charmap, if there is one. */
-  /*    There can only be one (platform=0, specific=5, format=14).         */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * @Function:
+   *   find_variant_selector_charmap
+   *
+   * @Description:
+   *   This function finds the variant selector charmap, if there is one.
+   *   There can only be one (platform=0, specific=5, format=14).
+   */
   static FT_CharMap
   find_variant_selector_charmap( FT_Face  face )
   {
@@ -1294,14 +1307,14 @@
   }
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* <Function>                                                            */
-  /*    open_face                                                          */
-  /*                                                                       */
-  /* <Description>                                                         */
-  /*    This function does some work for FT_Open_Face().                   */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * @Function:
+   *   open_face
+   *
+   * @Description:
+   *   This function does some work for FT_Open_Face().
+   */
   static FT_Error
   open_face( FT_Driver      driver,
              FT_Stream      *astream,
@@ -2176,13 +2189,13 @@
   {
 
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_raccess
+#define FT_COMPONENT  raccess
 
     FT_Memory  memory = library->memory;
     FT_Error   error  = FT_ERR( Unknown_File_Format );
     FT_UInt    i;
 
-    char *     file_names[FT_RACCESS_N_RULES];
+    char*      file_names[FT_RACCESS_N_RULES];
     FT_Long    offsets[FT_RACCESS_N_RULES];
     FT_Error   errors[FT_RACCESS_N_RULES];
     FT_Bool    is_darwin_vfs, vfs_rfork_has_no_font = FALSE; /* not tested */
@@ -2254,7 +2267,7 @@
     return error;
 
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_objs
+#define FT_COMPONENT  objs
 
   }
 
@@ -2282,7 +2295,7 @@
     {
 
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_raccess
+#define FT_COMPONENT  raccess
 
 #ifdef FT_DEBUG_LEVEL_TRACE
       FT_TRACE3(( "Try as dfont: " ));
@@ -2295,7 +2308,7 @@
       FT_TRACE3(( "%s\n", error ? "failed" : "successful" ));
 
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_objs
+#define FT_COMPONENT  objs
 
     }
 
@@ -3464,7 +3477,8 @@
     if ( !face )
       return FT_THROW( Invalid_Face_Handle );
 
-    if ( encoding == FT_ENCODING_NONE )
+    /* FT_ENCODING_NONE is a valid encoding for BDF, PCF, and Windows FNT */
+    if ( encoding == FT_ENCODING_NONE && !face->num_charmaps )
       return FT_THROW( Invalid_Argument );
 
     /* FT_ENCODING_UNICODE is special.  We try to find the `best' Unicode */
@@ -3485,7 +3499,7 @@
       if ( cur[0]->encoding == encoding )
       {
         face->charmap = cur[0];
-        return 0;
+        return FT_Err_Ok;
       }
     }
 
@@ -3510,14 +3524,12 @@
     if ( !cur || !charmap )
       return FT_THROW( Invalid_CharMap_Handle );
 
-    if ( FT_Get_CMap_Format( charmap ) == 14 )
-      return FT_THROW( Invalid_Argument );
-
     limit = cur + face->num_charmaps;
 
     for ( ; cur < limit; cur++ )
     {
-      if ( cur[0] == charmap )
+      if ( cur[0] == charmap                    &&
+           FT_Get_CMap_Format ( charmap ) != 14 )
       {
         face->charmap = cur[0];
         return FT_Err_Ok;
@@ -4487,16 +4499,89 @@
                             FT_Render_Mode  render_mode )
   {
     FT_Error     error = FT_Err_Ok;
+    FT_Face      face  = slot->face;
     FT_Renderer  renderer;
 
 
-    /* if it is already a bitmap, no need to do anything */
     switch ( slot->format )
     {
     case FT_GLYPH_FORMAT_BITMAP:   /* already a bitmap, don't do anything */
       break;
 
     default:
+      if ( slot->internal->load_flags & FT_LOAD_COLOR )
+      {
+        FT_LayerIterator  iterator;
+
+        FT_UInt  base_glyph = slot->glyph_index;
+
+        FT_Bool  have_layers;
+        FT_UInt  glyph_index;
+        FT_UInt  color_index;
+
+
+        /* check whether we have colored glyph layers */
+        iterator.p  = NULL;
+        have_layers = FT_Get_Color_Glyph_Layer( face,
+                                                base_glyph,
+                                                &glyph_index,
+                                                &color_index,
+                                                &iterator );
+        if ( have_layers )
+        {
+          error = FT_New_GlyphSlot( face, NULL );
+          if ( !error )
+          {
+            TT_Face       ttface = (TT_Face)face;
+            SFNT_Service  sfnt   = (SFNT_Service)ttface->sfnt;
+
+
+            do
+            {
+              FT_Int32  load_flags = slot->internal->load_flags;
+
+
+              /* disable the `FT_LOAD_COLOR' flag to avoid recursion */
+              /* right here in this function                         */
+              load_flags &= ~FT_LOAD_COLOR;
+
+              /* render into the new `face->glyph' glyph slot */
+              load_flags |= FT_LOAD_RENDER;
+
+              error = FT_Load_Glyph( face, glyph_index, load_flags );
+              if ( error )
+                break;
+
+              /* blend new `face->glyph' into old `slot'; */
+              /* at the first call, `slot' is still empty */
+              error = sfnt->colr_blend( ttface,
+                                        color_index,
+                                        slot,
+                                        face->glyph );
+              if ( error )
+                break;
+
+            } while ( FT_Get_Color_Glyph_Layer( face,
+                                                base_glyph,
+                                                &glyph_index,
+                                                &color_index,
+                                                &iterator ) );
+
+            if ( !error )
+              slot->format = FT_GLYPH_FORMAT_BITMAP;
+
+            /* this call also restores `slot' as the glyph slot */
+            FT_Done_GlyphSlot( face->glyph );
+          }
+
+          if ( !error )
+            return error;
+
+          /* Failed to do the colored layer.  Draw outline instead. */
+          slot->format = FT_GLYPH_FORMAT_OUTLINE;
+        }
+      }
+
       {
         FT_ListNode  node = NULL;
 
@@ -4532,7 +4617,7 @@
 #ifdef FT_DEBUG_LEVEL_TRACE
 
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_bitmap
+#define FT_COMPONENT  checksum
 
     /*
      * Computing the MD5 checksum is expensive, unnecessarily distorting a
@@ -4542,9 +4627,9 @@
      */
 
     /* we use FT_TRACE3 in this block */
-    if ( !error                             &&
-         ft_trace_levels[trace_bitmap] >= 3 &&
-         slot->bitmap.buffer                )
+    if ( !error                               &&
+         ft_trace_levels[trace_checksum] >= 3 &&
+         slot->bitmap.buffer                  )
     {
       FT_Bitmap  bitmap;
       FT_Error   err;
@@ -4565,8 +4650,11 @@
         int            pitch = bitmap.pitch;
 
 
-        FT_TRACE3(( "FT_Render_Glyph: bitmap %dx%d, mode %d\n",
-                    rows, pitch, slot->bitmap.pixel_mode ));
+        FT_TRACE3(( "FT_Render_Glyph: bitmap %dx%d, %s (mode %d)\n",
+                    pitch,
+                    rows,
+                    pixel_modes[slot->bitmap.pixel_mode],
+                    slot->bitmap.pixel_mode ));
 
         for ( i = 0; i < rows; i++ )
           for ( j = 0; j < pitch; j++ )
@@ -4594,49 +4682,56 @@
      */
 
     /* we use FT_TRACE7 in this block */
-    if ( !error                             &&
-         ft_trace_levels[trace_bitmap] >= 7 &&
-         slot->bitmap.rows  < 128U          &&
-         slot->bitmap.width < 128U          &&
-         slot->bitmap.buffer                )
+    if ( !error                               &&
+         ft_trace_levels[trace_checksum] >= 7 )
     {
-      int  rows  = (int)slot->bitmap.rows;
-      int  width = (int)slot->bitmap.width;
-      int  pitch =      slot->bitmap.pitch;
-      int  i, j, m;
-      unsigned char*  topleft = slot->bitmap.buffer;
-
-      if ( pitch < 0 )
-        topleft -= pitch * ( rows - 1 );
-
-      FT_TRACE7(( "Netpbm image: start\n" ));
-      switch ( slot->bitmap.pixel_mode )
+      if ( slot->bitmap.rows  < 128U &&
+           slot->bitmap.width < 128U &&
+           slot->bitmap.buffer       )
       {
-      case FT_PIXEL_MODE_MONO:
-        FT_TRACE7(( "P1 %d %d\n", width, rows ));
-        for ( i = 0; i < rows; i++ )
-        {
-          for ( j = 0; j < width; )
-            for ( m = 128; m > 0 && j < width; m >>= 1, j++ )
-              FT_TRACE7(( " %d", ( topleft[i * pitch + j / 8] & m ) != 0 ));
-          FT_TRACE7(( "\n" ));
-        }
-        break;
+        int  rows  = (int)slot->bitmap.rows;
+        int  width = (int)slot->bitmap.width;
+        int  pitch =      slot->bitmap.pitch;
+        int  i, j, m;
 
-      default:
-        FT_TRACE7(( "P2 %d %d 255\n", width, rows ));
-        for ( i = 0; i < rows; i++ )
+        unsigned char*  topleft = slot->bitmap.buffer;
+
+
+        if ( pitch < 0 )
+          topleft -= pitch * ( rows - 1 );
+
+        FT_TRACE7(( "Netpbm image: start\n" ));
+        switch ( slot->bitmap.pixel_mode )
         {
-          for ( j = 0; j < width; j += 1 )
-            FT_TRACE7(( " %3u", topleft[i * pitch + j] ));
-          FT_TRACE7(( "\n" ));
+        case FT_PIXEL_MODE_MONO:
+          FT_TRACE7(( "P1 %d %d\n", width, rows ));
+          for ( i = 0; i < rows; i++ )
+          {
+            for ( j = 0; j < width; )
+              for ( m = 128; m > 0 && j < width; m >>= 1, j++ )
+                FT_TRACE7(( " %d",
+                            ( topleft[i * pitch + j / 8] & m ) != 0 ));
+            FT_TRACE7(( "\n" ));
+          }
+          break;
+
+        default:
+          FT_TRACE7(( "P2 %d %d 255\n", width, rows ));
+          for ( i = 0; i < rows; i++ )
+          {
+            for ( j = 0; j < width; j += 1 )
+              FT_TRACE7(( " %3u", topleft[i * pitch + j] ));
+            FT_TRACE7(( "\n" ));
+          }
         }
+        FT_TRACE7(( "Netpbm image: end\n" ));
       }
-      FT_TRACE7(( "Netpbm image: end\n" ));
+      else
+        FT_TRACE7(( "Netpbm image: too large, omitted\n" ));
     }
 
 #undef  FT_COMPONENT
-#define FT_COMPONENT  trace_objs
+#define FT_COMPONENT  objs
 
 #endif /* FT_DEBUG_LEVEL_TRACE */
 
@@ -4675,21 +4770,22 @@
   /*************************************************************************/
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* <Function>                                                            */
-  /*    Destroy_Module                                                     */
-  /*                                                                       */
-  /* <Description>                                                         */
-  /*    Destroys a given module object.  For drivers, this also destroys   */
-  /*    all child faces.                                                   */
-  /*                                                                       */
-  /* <InOut>                                                               */
-  /*    module :: A handle to the target driver object.                    */
-  /*                                                                       */
-  /* <Note>                                                                */
-  /*    The driver _must_ be LOCKED!                                       */
-  /*                                                                       */
+  /**************************************************************************
+   *
+   * @Function:
+   *   Destroy_Module
+   *
+   * @Description:
+   *   Destroys a given module object.  For drivers, this also destroys
+   *   all child faces.
+   *
+   * @InOut:
+   *   module ::
+   *     A handle to the target driver object.
+   *
+   * @Note:
+   *   The driver _must_ be LOCKED!
+   */
   static void
   Destroy_Module( FT_Module  module )
   {
@@ -5156,13 +5252,6 @@
 
     library->memory = memory;
 
-#ifdef FT_CONFIG_OPTION_PIC
-    /* initialize position independent code containers */
-    error = ft_pic_container_init( library );
-    if ( error )
-      goto Fail;
-#endif
-
     library->version_major = FREETYPE_MAJOR;
     library->version_minor = FREETYPE_MINOR;
     library->version_patch = FREETYPE_PATCH;
@@ -5173,13 +5262,6 @@
     *alibrary = library;
 
     return FT_Err_Ok;
-
-#ifdef FT_CONFIG_OPTION_PIC
-  Fail:
-    ft_pic_container_destroy( library );
-    FT_FREE( library );
-    return error;
-#endif
   }
 
 
@@ -5237,10 +5319,10 @@
      *
      * Example:
      *
-     *  - the cff font driver uses the pshinter module in cff_size_done
-     *  - if the pshinter module is destroyed before the cff font driver,
-     *    opened FT_Face objects managed by the driver are not properly
-     *    destroyed, resulting in a memory leak
+     * - the cff font driver uses the pshinter module in cff_size_done
+     * - if the pshinter module is destroyed before the cff font driver,
+     *   opened FT_Face objects managed by the driver are not properly
+     *   destroyed, resulting in a memory leak
      *
      * Some faces are dependent on other faces, like Type42 faces that
      * depend on TrueType faces synthesized internally.
@@ -5308,11 +5390,6 @@
         }
       }
     }
-#endif
-
-#ifdef FT_CONFIG_OPTION_PIC
-    /* Destroy pic container contents */
-    ft_pic_container_destroy( library );
 #endif
 
     FT_FREE( library );
@@ -5399,6 +5476,43 @@
     }
 
     return error;
+  }
+
+
+  /* documentation is in freetype.h */
+
+  FT_EXPORT_DEF( FT_Bool )
+  FT_Get_Color_Glyph_Layer( FT_Face            face,
+                            FT_UInt            base_glyph,
+                            FT_UInt           *aglyph_index,
+                            FT_UInt           *acolor_index,
+                            FT_LayerIterator*  iterator )
+  {
+    TT_Face       ttface;
+    SFNT_Service  sfnt;
+
+
+    if ( !face                                   ||
+         !aglyph_index                           ||
+         !acolor_index                           ||
+         !iterator                               ||
+         base_glyph >= (FT_UInt)face->num_glyphs )
+      return 0;
+
+    if ( !FT_IS_SFNT( face ) )
+      return 0;
+
+    ttface = (TT_Face)face;
+    sfnt   = (SFNT_Service)ttface->sfnt;
+
+    if ( sfnt->get_colr_layer )
+      return sfnt->get_colr_layer( ttface,
+                                   base_glyph,
+                                   aglyph_index,
+                                   acolor_index,
+                                   iterator );
+    else
+      return 0;
   }
 
 

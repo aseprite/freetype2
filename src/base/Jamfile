@@ -20,6 +20,7 @@ SubDir  FT2_TOP $(FT2_SRC_DIR) base ;
     _sources = basepic
                ftadvanc
                ftcalc
+               ftcolor
                ftdbgmem
                ftfntfmt
                ftgloadr
@@ -47,8 +48,7 @@ SubDir  FT2_TOP $(FT2_SRC_DIR) base ;
 # Add the optional/replaceable files.
 #
 {
-  local  _sources = ftapi
-                    ftbbox
+  local  _sources = ftbbox
                     ftbdf
                     ftbitmap
                     ftcid
